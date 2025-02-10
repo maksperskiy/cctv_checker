@@ -1,0 +1,346 @@
+{% extends "admin/change_form.html" %}
+
+{% load custom_filters %}
+
+
+
+{% block content %}
+
+<div style="min-height: 320px;">
+    {{ block.super }}
+</div>
+<hr style="display: block;
+height: 1px;
+border: 0;
+border-top: 1px solid #ccc;
+margin: 1em 0;
+padding: 0;" />
+<div style="margin-bottom: 36px;">
+    <section class="carousel" aria-label="Gallery">
+        <ol id="imageSlider" class="carousel__viewport">
+            {% for check in checks %}
+            {% if check.image %}
+            <li id="slide_{{ forloop.counter0 }}" tabindex="0" class="carousel__slide">
+                <div class="carousel__snapper">
+                    <!-- Use data-src for the real image and a placeholder for src -->
+                    <img data-src="{{ check.image.url }}" src="data:image/gif;base64,R0lGODlhAQABAIAAAAUEBA=="
+                        alt="Image {{ check.id }}" class="lazy-image" />
+                    <a href="#slide_{{ forloop.counter0|add:" -1"}}" class="carousel__prev">Go to prev slide</a>
+                    <a href="#slide_{{ forloop.counter0|add:" +1"}}" class="carousel__next">Go to next slide</a>
+                </div>
+            </li>
+            {% endif %}
+            {% endfor %}
+        </ol>
+
+        <aside class="carousel__navigation">
+            <ol class="carousel__navigation-list">
+                {% for check in checks %}
+                {% if check.created_at %}
+                <li class="carousel__navigation-item"
+                    style="flex-basis: {{ checks|calculate_timeline_position:check.created_at }}">
+                    <a href="#slide_{{ forloop.counter0 }}" title="{{ check.created_at }}"
+                        class="carousel__navigation-button"
+                        style="background-color: {{ check.status.lower|status_color }}">
+                        Go to slide {{ forloop.counter0 }}</a>
+                </li>
+                {% endif %}
+                {% endfor %}
+            </ol>
+        </aside>
+    </section>
+</div>
+
+
+
+
+<style>
+    @keyframes tonext {
+        75% {
+            left: 0;
+        }
+
+        95% {
+            left: 100%;
+        }
+
+        98% {
+            left: 100%;
+        }
+
+        99% {
+            left: 0;
+        }
+    }
+
+    @keyframes tostart {
+        75% {
+            left: 0;
+        }
+
+        95% {
+            left: -300%;
+        }
+
+        98% {
+            left: -300%;
+        }
+
+        99% {
+            left: 0;
+        }
+    }
+
+    @keyframes snap {
+        96% {
+            scroll-snap-align: center;
+        }
+
+        97% {
+            scroll-snap-align: none;
+        }
+
+        99% {
+            scroll-snap-align: none;
+        }
+
+        100% {
+            scroll-snap-align: center;
+        }
+    }
+
+
+    ol,
+    li {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .carousel {
+        min-height: 720px;
+        filter: drop-shadow(0 0 10px #0003);
+        perspective: 100px;
+    }
+
+    .carousel__viewport {
+        display: flex;
+        overflow-x: scroll;
+        scrollbar-width: none;
+        height: 640px;
+        counter-reset: item;
+        scroll-behavior: smooth;
+        scroll-snap-type: x mandatory;
+    }
+
+    .carousel__viewport::-webkit-scrollbar {
+        display: none;
+    }
+
+    .carousel__slide {
+        position: relative;
+        flex: 0 0 100%;
+        counter-increment: item;
+        width: 100%;
+    }
+
+    .carousel__slide:before {
+        /* content: counter(item); */
+        /* position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate3d(-50%, -40%, 70px);
+        color: #fff;
+        font-size: 2em; */
+    }
+
+    .carousel__snapper {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 80%;
+        scroll-snap-align: center;
+    }
+
+
+    .carousel__snapper img {
+        margin: 0 auto;
+        height: 640px;
+    }
+
+    @media (hover: hover) {
+        .carousel__snapper {
+            animation-name: tonext, snap;
+            animation-timing-function: ease;
+            animation-iteration-count: infinite;
+        }
+
+        .carousel__slide:last-child .carousel__snapper {
+            animation-name: tostart, snap;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .carousel__snapper {
+            animation-name: none;
+        }
+    }
+
+    .carousel:hover .carousel__snapper,
+    .carousel:focus-within .carousel__snapper {
+        animation-name: none;
+    }
+
+    .carousel__navigation {
+        text-align: center;
+        /* margin-bottom: 100px; */
+    }
+
+    .carousel__navigation-list,
+    .carousel__navigation-item {
+        display: inline-block;
+    }
+
+    .carousel__navigation-button {
+        display: flex;
+        width: 1rem;
+        height: 1rem;
+        background-color: #333;
+        background-clip: content-box;
+        /* border: 0.25rem solid transparent; */
+
+        font-size: 0;
+        transition: transform 0.1s;
+    }
+
+    /* .carousel::before,
+    .carousel::after, */
+    .carousel__prev,
+    .carousel__next {
+        position: absolute;
+        top: 50%;
+        width: 4rem;
+        transform: translateY(-50%);
+        /* border-radius: 50%; */
+        font-size: 0;
+        outline: 0;
+        height: 100%;
+    }
+
+    /* .carousel::before, */
+    .carousel__prev {
+        left: -4rem;
+    }
+
+    /* .carousel::after, */
+    .carousel__next {
+        right: -4rem;
+    }
+
+    .carousel::before,
+    .carousel::after {
+        top: 0;
+        position: absolute;
+        height: 640px;
+        width: 4rem;
+        content: '';
+        /* z-index: 100; */
+        background-color: #353535;
+        background-size: 1.5rem 1.5rem;
+        background-repeat: no-repeat;
+        background-position: center center;
+        color: #fff;
+        font-size: 2.5rem;
+        line-height: 4rem;
+        text-align: center;
+        pointer-events: none;
+    }
+
+    .carousel::before {
+        left: 4rem;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolygon points='0,50 80,100 80,0' fill='%23fff'/%3E%3C/svg%3E");
+    }
+
+    .carousel::after {
+        right: 4rem;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpolygon points='100,50 20,100 20,0' fill='%23fff'/%3E%3C/svg%3E");
+    }
+</style>
+
+
+<script>
+    // Wait for the window to fully load
+    window.onload = function () {
+        // Select the last image in the slider
+        var slider = document.getElementById('imageSlider');
+        var lastImage = slider.lastElementChild;
+
+        // Scroll to the last image
+        lastImage.scrollIntoView({ behavior: 'instant', inline: 'end' });
+    };
+
+</script>
+
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        let lazyImages = [].slice.call(document.querySelectorAll("img.lazy-image"));
+        let lazyImageObserver;
+
+        // Lazy load setup using IntersectionObserver
+        function lazyLoadImage(image) {
+            image.src = image.dataset.src;
+            image.classList.remove("lazy-image");
+        }
+
+        // IntersectionObserver setup
+        if ("IntersectionObserver" in window) {
+            lazyImageObserver = new IntersectionObserver(function (entries, observer) {
+                entries.forEach(function (entry) {
+                    if (entry.isIntersecting) {
+                        let lazyImage = entry.target;
+                        lazyLoadImage(lazyImage);
+                        lazyImageObserver.unobserve(lazyImage);
+                    }
+                });
+            });
+
+            lazyImages.forEach(function (lazyImage) {
+                lazyImageObserver.observe(lazyImage);
+            });
+        } else {
+            // Fallback for browsers without IntersectionObserver support
+            lazyImages.forEach(function (lazyImage) {
+                lazyLoadImage(lazyImage);
+            });
+        }
+
+        // Handle anchor navigation
+        function scrollToSlide(anchor) {
+            const targetSlide = document.querySelector(anchor);
+
+            // Scroll into view manually to avoid default behavior that loads intermediate images
+            if (targetSlide) {
+                targetSlide.scrollIntoView({ behavior: 'instant', block: 'nearest' });
+
+                // Find the image inside the slide and lazy load it
+                let image = targetSlide.querySelector('img.lazy-image');
+                if (image) {
+                    lazyLoadImage(image); // Lazy load the image in the target slide
+                }
+            }
+        }
+
+        // Capture clicks on carousel navigation buttons (anchor links)
+        document.querySelectorAll('.carousel__navigation-button').forEach(button => {
+            button.addEventListener('click', function (e) {
+                e.preventDefault();
+                let targetId = this.getAttribute('href');
+                scrollToSlide(targetId); // Scroll to the specific slide without loading intermediate images
+                window.location.hash = targetId; // Update the URL hash without triggering default anchor behavior
+            });
+        });
+    });
+</script>
+
+{% endblock %}

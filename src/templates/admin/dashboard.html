@@ -1,0 +1,64 @@
+{% load custom_filters %}
+
+{% block content %}
+<h1 class="text-2xl font-bold text-center mb-4">Camera Average Status Calendar</h1>
+<div class="container mx-auto mt-8" style="display: grid; grid-template-columns: 40px repeat({{ weeks_count }}, 40px);">
+
+    <div class="grid grid-cols-7 gap-2 text-center">
+        <div class="font-semibold">Mon</div>
+        <div class="font-semibold">Tue</div>
+        <div class="font-semibold">Wed</div>
+        <div class="font-semibold">Thu</div>
+        <div class="font-semibold">Fri</div>
+        <div class="font-semibold">Sat</div>
+        <div class="font-semibold">Sun</div>
+    </div>
+
+    <div class="grid grid-cols-7 gap-2">
+        {% for day in calendar_stats %}
+        {% if forloop.first %}
+        {% for _ in day.date.weekday|range_filter %}
+        <div class="w-8 h-8"></div>
+        {% endfor %}
+        {% endif %}
+
+        <div class="w-8 h-8 rounded-sm" title="{{ day.date }}: {{ day.status }}"
+            style="background-color: {{ day.color }}">
+        </div>
+
+        {% if day.date.weekday == 6 %}
+    </div>
+    <div class="grid grid-cols-7 gap-2">
+        {% endif %}
+        {% if forloop.last %}
+        {% for _ in day.date.weekday|add:"-6"|abs|range_filter %}
+        <div class="w-8 h-8"></div>
+        {% endfor %}
+        {% endif %}
+        {% endfor %}
+    </div>
+
+</div>
+<div class="flex justify-center mt-6">
+    <div class="flex items-center mx-2">
+        <div class="w-4 h-4 mr-2" style="background-color: #00FF00;"></div>
+        <span>Ok</span>
+    </div>
+    <div class="flex items-center mx-2">
+        <div class="w-4 h-4 mr-2" style="background-color: #FF8C00;"></div>
+        <span>Warning</span>
+    </div>
+    <div class="flex items-center mx-2">
+        <div class="w-4 h-4 mr-2" style="background-color: #FF0000;"></div>
+        <span>Error</span>
+    </div>
+    <div class="flex items-center mx-2">
+        <div class="w-4 h-4 mr-2" style="background-color: #000000;"></div>
+        <span>Offline</span>
+    </div>
+    <div class="flex items-center mx-2">
+        <div class="w-4 h-4 mr-2" style="background-color: #A9A9A9;"></div>
+        <span>Unknown</span>
+    </div>
+</div>
+{% endblock %}

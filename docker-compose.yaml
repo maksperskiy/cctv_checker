@@ -1,0 +1,130 @@
+x-minio-common: &minio-common
+  image: quay.io/minio/minio:RELEASE.2022-05-08T23-50-31Z
+  command: server --console-address ":9001" http://minio{1...2}/data{1...2}
+  expose:
+    - "9000"
+    - "9001"
+  env_file:
+    - ./.env
+  healthcheck:
+    test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+    interval: 30s
+    timeout: 20s
+    retries: 3
+
+services:
+
+  backend:
+    container_name: backend
+    build:
+      context: .
+      dockerfile: docker/cctv/Dockerfile
+    command: >
+      sh -c "python manage.py makemigrations &&
+                python manage.py migrate &&
+                python manage.py runserver 0.0.0.0:8000"
+    env_file:
+      - ./.env
+    stdin_open: true
+    environment:
+      - PYTHONUNBUFFERED=1
+    restart: always
+    tty: true
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/opt/app
+    depends_on:
+      - postgres
+
+  celery:
+    container_name: celery
+    build:
+      context: .
+      dockerfile: docker/celery/Dockerfile
+    env_file:
+      - ./.env
+    command: celery -A core worker --beat --scheduler django
+    restart: always
+    depends_on:
+      - rabbitmq
+      - backend
+
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-U", "$DB_USER" ]
+      interval: 5s
+      retries: 5
+    restart: always
+
+  rabbitmq:
+    hostname: rabbitmq
+    image: rabbitmq:management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 5s
+      timeout: 30s
+      retries: 50
+    restart: always
+
+  redis:
+    image: redis:latest
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_USER=${REDIS_USER}
+      - REDIS_USER_PASSWORD=${REDIS_USER_PASSWORD}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "$REDIS_PASSWORD", "ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  minio1:
+    <<: *minio-common
+    hostname: minio1
+    volumes:
+      - data1-1:/data1
+      - data1-2:/data2
+
+  minio2:
+    <<: *minio-common
+    hostname: minio2
+    volumes:
+      - data2-1:/data1
+      - data2-2:/data2
+
+  nginx:
+    image: nginx:1.19.2-alpine
+    hostname: nginx
+    volumes:
+      - ./docker/minio/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "9005:9000"
+      - "9006:9001"
+    depends_on:
+      - minio1
+      - minio2
+
+volumes:
+  postgres-db-volume:
+  redisdata:
+  data1-1:
+  data1-2:
+  data2-1:
+  data2-2:
