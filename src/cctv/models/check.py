@@ -9,7 +9,9 @@ class Check(models.Model):
     OFFLINE = "OFFLINE"
     ERROR = "ERROR"
     WARNING = "WARNING"
+    WARNING_MULTIPLE = "WARNING_MULTIPLE"
     UNKNOWN = "UNKNOWN"
+    WARNING_ARTIFACTS = "WARNING_ARTIFACTS"
 
     STATUS_CHOICES = [
         (OK, "Ok"),
@@ -17,6 +19,8 @@ class Check(models.Model):
         (ERROR, "Error"),
         (WARNING, "Warning"),
         (UNKNOWN, "Unknown"),
+        (WARNING_MULTIPLE, "Multiple warnings"),
+        (WARNING_ARTIFACTS, "Artifacts warning")
     ]
 
     created_at = models.DateTimeField(null=True, blank=True)
