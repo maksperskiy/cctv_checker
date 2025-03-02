@@ -41,14 +41,17 @@ def calculate_timeline_position(all_items, created_at):
     # Return the percentage width of this segment
     return f"{(current_seconds / total_seconds) * 100}%"
 
+
 @register.filter(name="abs")
 def abs_filter(value):
     return abs(value)
 
+
 @register.filter
 def range_filter(value):
-    """Returns a range up to the specified value."""
+    """Return a range up to the specified value."""
     return range(value)
+
 
 @register.filter
 def status_color(value):
@@ -57,6 +60,8 @@ def status_color(value):
         "warning": "#FF8C00",
         "error": "#FF0000",
         "offline": "#000000",
+        "warning_multiple": "#C16C04",
         "unknown": "#A9A9A9",
+        "warning_artifacts": "#A54F0C",
     }
     return status_colors.get(value, "gray")
