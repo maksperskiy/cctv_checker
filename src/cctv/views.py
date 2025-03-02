@@ -26,6 +26,7 @@ def dashboard_callback(request, context):
         Check.OFFLINE.lower(): "#000000",
         Check.ERROR.lower(): "#FF0000",
         Check.UNKNOWN.lower(): "#A9A9A9",
+        Check.WARNING_MULTIPLE.lower(): "#C14309",
     }
 
     # Prepare data with computed color for each day
@@ -45,7 +46,7 @@ def dashboard_callback(request, context):
             'color': status_colors[avg_status]  # Get the color directly
         })
         calendar_weeks.append(single_date.isocalendar().week)
-        
+
     context.update({
         'calendar_stats': calendar_stats,
         'weeks_count': max(calendar_weeks) - min(calendar_weeks) + 1,
