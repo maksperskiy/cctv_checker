@@ -134,6 +134,8 @@ class CameraAdmin(ModelAdmin, ImportExportModelAdmin):
             Check.OFFLINE: "#000000",
             Check.ERROR: "#FF0000",
             Check.UNKNOWN: "#A9A9A9",
+            Check.WARNING_MULTIPLE: "#C16C04",
+            Check.WARNING_ARTIFACTS: "#A54F0C",
         }
         color = colors[latest_check.status] if latest_check else colors[Check.UNKNOWN]
         return format_html(
@@ -164,10 +166,9 @@ class CameraAdmin(ModelAdmin, ImportExportModelAdmin):
         return super().change_view(
             request, object_id, form_url, extra_context=extra_context
         )
-    
-    def has_view_permission(self, request, obj = ...):
-        return request.user.is_superuser or request.user.groups.filter(pk=obj.user_group.pk).exists()
 
+    def has_view_permission(self, request, obj=...):
+        return request.user.is_superuser or request.user.groups.filter(pk=obj.user_group.pk).exists()
 
     def save_model(self, request, obj: Camera, form, change):
         if getattr(obj, "user_group", None) is None:

@@ -13,9 +13,12 @@ FROM base
 
 COPY docker/celery/requirements.txt /opt/app/
 
-RUN apt -y update \
+RUN apt -y update\
     && pip3 install --upgrade pip \
-    && pip3 install -r requirements.txt 
+    && pip3 install -r requirements.txt \
+    && pip3 install --default-timeout=1200 torch --index-url https://download.pytorch.org/whl/cpu \
+    && pip3 install albumentations
+    
 
 COPY src/ /opt/app
 # RUN python manage.py collectstatic --noinput

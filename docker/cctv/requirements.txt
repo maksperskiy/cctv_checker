@@ -59,3 +59,9 @@ tzdata==2024.2
 urllib3==2.2.3
 vine==5.1.0
 wcwidth==0.2.13
+onnx==1.17.0
+onnxruntime==1.20.1
+onnxscript==0.2.0
+opencv-python==4.11.0.86
+tqdm==4.67.1
+albumentations==2.0.4

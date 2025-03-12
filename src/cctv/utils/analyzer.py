@@ -1,87 +1,68 @@
 from abc import ABC, abstractmethod
 
+import albumentations as A
 import cv2
 import numpy as np
-from joblib import load
+import onnxruntime
+import torch
+from albumentations.pytorch import ToTensorV2
+
+onnxruntime.set_default_logger_severity(3)
 
 
 class AbstractImageAnalazer(ABC):
     @abstractmethod
-    def analyse_image(self, image: cv2.typing.MatLike) -> bool: ...
+    def analyse_image(self, image: cv2.typing.MatLike) -> bool:
+        ...
 
 
 class SimpleImageAnalazer(AbstractImageAnalazer):
-    clf = load("./cctv/utils/models/simple_analyzer_v1.joblib")
+    is_camera_clear_model_runtime = onnxruntime.InferenceSession("/opt/app/cctv/utils/models/efficientnetb1_256x256-imagenetnorm-0907_current.onnx")
+    artifacts_classification_model_runtime = onnxruntime.InferenceSession("/opt/app/cctv/utils/models/efficientnetb1-imagenetweight-350x350-0.88-type.onnx")
+    first_model_transform = A.Compose([
+        A.Resize(256, 256),
+        A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        ToTensorV2(),
+    ])
+    second_model_transform = A.Compose([
+        A.Resize(350, 350),
+        A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
+        ToTensorV2(),
+    ])
 
     @classmethod
     def analyse_image(cls, image: cv2.typing.MatLike) -> bool:
-        res = [func(image) for func in cls._funcs]
-        return cls.clf.predict([res])
+        im_tensor = cls._apply_transformations(image, cls.first_model_transform)
 
-    @staticmethod
-    def _calculate_laplacian_variance(image):
-        # Convert to grayscale
-        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        input_name = cls.is_camera_clear_model_runtime.get_inputs()[0].name
+        output_name = cls.is_camera_clear_model_runtime.get_outputs()[0].name
+        predict = cls.is_camera_clear_model_runtime.run([output_name], {input_name: np.array(im_tensor)})[0]
 
-        # Compute the Laplacian (second derivative)
-        laplacian = cv2.Laplacian(gray_image, cv2.CV_64F)
+        # predict_list_label = np.argmax(predict, axis=1)
+        predict = torch.sigmoid(torch.tensor(predict))
+        predict_label = (predict > 0.5).int()
+        predict_label = predict_label.item()
 
-        # Variance of the Laplacian gives a measure of sharpness
-        variance = laplacian.var()
+        if predict_label == 0:
+            return predict_label
 
-        return variance
+        im_tensor = cls._apply_transformations(image, cls.second_model_transform)
+        input_name = cls.artifacts_classification_model_runtime.get_inputs()[0].name
+        output_name = cls.artifacts_classification_model_runtime.get_outputs()[0].name
+        predict = cls.artifacts_classification_model_runtime.run([output_name], {input_name: np.array(im_tensor)})[0]
 
-    @staticmethod
-    def _detect_edges(image):
-        # Convert to grayscale
-        gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        predict = torch.sigmoid(torch.tensor(predict))
+        predict_label = (predict > 0.5).int()
+        predict_label = predict_label.item()
 
-        # Apply Gaussian blur to reduce noise
-        blurred_image = cv2.GaussianBlur(gray_image, (5, 5), 0)
+        return predict_label + 1
 
-        # Use Canny Edge Detection
-        edges = cv2.Canny(blurred_image, 50, 150)
+    # @staticmethod
+    # def _to_numpy(tensor):
+    #    return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
 
-        # Count the number of edges
-        edge_count = np.sum(edges > 0)
-
-        return edge_count
-
-    @staticmethod
-    def _analyze_color_histogram(image):
-        # Convert image to HSV color space for better light and saturation analysis
-        hsv_image = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-
-        # Compute the histogram for the saturation channel (index 1)
-        hist = cv2.calcHist([hsv_image], [1], None, [256], [0, 256])
-
-        # Normalize the histogram
-        hist = hist / hist.sum()
-
-        # Calculate the standard deviation (how spread out the colors are)
-        saturation_variance = np.var(hist)
-
-        return saturation_variance
-
-    @staticmethod
-    def _detect_noise(image):
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        mean, stddev = cv2.meanStdDev(gray)
-        return stddev[0][0]
-
-    @staticmethod
-    def _detect_compression_artifacts(image):
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        dct = cv2.dct(np.float32(gray))
-
-        # Analyze the DCT coefficients, e.g., check mean value
-        mean_dct = np.mean(dct)
-        return mean_dct
-
-    _funcs = [
-        _detect_edges,
-        _calculate_laplacian_variance,
-        _analyze_color_histogram,
-        _detect_noise,
-        _detect_compression_artifacts,
-    ]
+    @classmethod
+    def _apply_transformations(cls, image, transform):
+        tensor_image = transform(image=image)['image']
+        batch_tensor = np.expand_dims(tensor_image, 0)
+        return batch_tensor
